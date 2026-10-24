@@ -86,6 +86,17 @@ export class UiManager {
 
       <!-- Bottom Controls Bar -->
       <div class="bottom-controls-bar">
+        <!-- Mode Switcher: Motion Trails (Default) vs Overlay -->
+        <div class="mode-switcher-bar">
+          <button class="mode-pill active" data-mode="motion_trails" title="Clean subject when still; neon ghost trails ONLY on movement">
+            <span>⚡ MOTION TRAILS</span>
+            <span class="mode-badge">DEFAULT</span>
+          </button>
+          <button class="mode-pill" data-mode="overlay" title="Full-frame green glitch and continuous cyberpsychosis overlay">
+            <span>🔮 OVERLAY</span>
+          </button>
+        </div>
+
         <!-- Presets Row -->
         <div class="presets-strip">
           <button class="preset-pill" data-preset="early_david">EARLY DAVID</button>
@@ -172,18 +183,42 @@ export class UiManager {
           <div id="tab-trails" class="tab-content active">
             <div class="control-row">
               <div class="control-header">
-                <span>Trail Persistence (Decay Speed)</span>
-                <span id="val-trail-persist" class="control-val">0.92</span>
+                <span>Discrete Echo Count (Sandevistan Copies)</span>
+                <span id="val-trail-count" class="control-val">4</span>
               </div>
-              <input type="range" id="slider-trail-persist" class="cyber-slider" min="70" max="98" value="92" />
+              <input type="range" id="slider-trail-count" class="cyber-slider" min="1" max="6" value="4" />
             </div>
 
             <div class="control-row">
               <div class="control-header">
-                <span>Echo Trail Lag / Offset</span>
-                <span id="val-trail-lag" class="control-val">0.50</span>
+                <span>Echo Spread / Spacing</span>
+                <span id="val-trail-spread" class="control-val">0.65</span>
               </div>
-              <input type="range" id="slider-trail-lag" class="cyber-slider" min="0" max="100" value="50" />
+              <input type="range" id="slider-trail-spread" class="cyber-slider" min="10" max="100" value="65" />
+            </div>
+
+            <div class="control-row">
+              <div class="control-header">
+                <span>Trail Glow Brightness</span>
+                <span id="val-trail-brightness" class="control-val">1.50</span>
+              </div>
+              <input type="range" id="slider-trail-brightness" class="cyber-slider" min="50" max="250" value="150" />
+            </div>
+
+            <div class="control-row">
+              <div class="control-header">
+                <span>Trail Persistence (Fade Speed)</span>
+                <span id="val-trail-persist" class="control-val">0.93</span>
+              </div>
+              <input type="range" id="slider-trail-persist" class="cyber-slider" min="70" max="98" value="93" />
+            </div>
+
+            <div class="control-row">
+              <div class="control-header">
+                <span>Echo Lag Drift</span>
+                <span id="val-trail-lag" class="control-val">0.60</span>
+              </div>
+              <input type="range" id="slider-trail-lag" class="cyber-slider" min="0" max="100" value="60" />
             </div>
 
             <div class="control-group">
@@ -465,6 +500,26 @@ export class UiManager {
       saveCustomSettings(this.settings);
     });
 
+    // Mode Switcher Pills
+    const modePills = this.appRoot.querySelectorAll('.mode-pill[data-mode]');
+    modePills.forEach((pill) => {
+      pill.addEventListener('click', () => {
+        const mode = pill.getAttribute('data-mode') as 'motion_trails' | 'overlay';
+        if (mode) {
+          modePills.forEach((p) => p.classList.remove('active'));
+          pill.classList.add('active');
+          this.settings.effectMode = mode;
+          this.callbacks.onSettingsChange(this.settings);
+          saveCustomSettings(this.settings);
+          this.showToast(
+            mode === 'motion_trails'
+              ? 'Mode: MOTION TRAILS (Clean subject + motion ghost echoes)'
+              : 'Mode: OVERLAY (Full-frame cyberpsychosis)'
+          );
+        }
+      });
+    });
+
     // 2. Presets Pills
     const presetPills = this.appRoot.querySelectorAll('.preset-pill[data-preset]');
     presetPills.forEach((pill) => {
@@ -536,6 +591,15 @@ export class UiManager {
     });
 
     // Sliders in Drawer
+    this.bindRangeSlider('slider-trail-count', 'val-trail-count', 1, (v) => {
+      this.settings.trailCount = Math.round(v);
+    });
+    this.bindRangeSlider('slider-trail-spread', 'val-trail-spread', 100, (v) => {
+      this.settings.trailSpread = v;
+    });
+    this.bindRangeSlider('slider-trail-brightness', 'val-trail-brightness', 100, (v) => {
+      this.settings.trailBrightness = v;
+    });
     this.bindRangeSlider('slider-trail-persist', 'val-trail-persist', 100, (v) => {
       this.settings.trailPersistence = v;
     });
@@ -757,6 +821,19 @@ export class UiManager {
       if (b) b.textContent = val.toFixed(divisor >= 1000 ? 3 : 2);
     };
 
+    // Mode pills active state
+    const modePills = this.appRoot.querySelectorAll('.mode-pill[data-mode]');
+    modePills.forEach((p) => {
+      if (p.getAttribute('data-mode') === this.settings.effectMode) {
+        p.classList.add('active');
+      } else {
+        p.classList.remove('active');
+      }
+    });
+
+    setSlider('slider-trail-count', 'val-trail-count', this.settings.trailCount ?? 4, 1);
+    setSlider('slider-trail-spread', 'val-trail-spread', this.settings.trailSpread ?? 0.65, 100);
+    setSlider('slider-trail-brightness', 'val-trail-brightness', this.settings.trailBrightness ?? 1.5, 100);
     setSlider('slider-trail-persist', 'val-trail-persist', this.settings.trailPersistence, 100);
     setSlider('slider-trail-lag', 'val-trail-lag', this.settings.trailLag, 100);
     setSlider('slider-rgb-split', 'val-rgb-split', this.settings.rgbSplit, 1000);

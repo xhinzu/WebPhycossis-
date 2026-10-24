@@ -14,6 +14,9 @@ uniform float u_intensity;
 uniform float u_time;
 uniform vec3 u_trailColor;
 uniform float u_trailLag;
+uniform float u_trailBrightness;
+uniform float u_motionSensitivity;
+uniform float u_mode; // 0.0 = MOTION TRAILS, 1.0 = OVERLAY
 uniform vec2 u_resolution;
 uniform float u_mirror;
 uniform float u_flipY;
@@ -38,13 +41,18 @@ void main() {
   vec3 diff = currCol - prevCol;
   float motion = length(diff);
 
+  // Soft thresholded motion mask
+  float thresh = mix(0.18, 0.03, clamp(u_motionSensitivity, 0.0, 1.0));
+  float motionMask = smoothstep(thresh, thresh + 0.10, motion);
+
   // Person segmentation mask
   float person = 1.0;
   if (u_useMask > 0.5) {
     person = texture2D(u_mask, videoUv).r;
+    motionMask *= smoothstep(0.2, 0.6, person);
   }
 
-  // Sample previous feedback trails with slight lag offset
+  // Sample previous feedback trails with slight lag drift
   vec2 drift = vec2(sin(u_time * 1.5) * 0.0008, 0.0004) * u_trailLag;
   vec4 prevFeedback = texture2D(u_feedback, v_uv + drift);
 
@@ -52,22 +60,39 @@ void main() {
   float decayFactor = clamp(u_persistence - u_decay * 0.25, 0.5, 0.985);
   vec3 decayedTrails = prevFeedback.rgb * decayFactor;
 
-  // Calculate new ghost energy from motion & silhouette
-  // Higher motion creates stronger neon ghost echo
-  float motionGate = smoothstep(0.04, 0.28, motion) * person;
-  float ghostEnergy = motionGate * (u_intensity * 1.5 + 0.2);
-
-  // Dynamic color: neon green with cyan/electric lime highlights on high motion
+  // Trail colors
   vec3 neonGreen = u_trailColor;
   vec3 electricCyan = vec3(0.0, 1.0, 0.85);
-  vec3 ghostColor = mix(neonGreen, electricCyan, clamp(motion * 3.0, 0.0, 1.0));
+  vec3 trailHue = mix(neonGreen, electricCyan, clamp(motion * 3.0, 0.0, 1.0));
 
-  vec3 newGhost = ghostColor * ghostEnergy;
+  vec3 combined = vec3(0.0);
+  float outAlpha = 0.0;
 
-  // Maximum blend to preserve sharp ghost silhouettes, plus subtle additive accumulation
-  vec3 combined = max(decayedTrails, newGhost);
-  combined = mix(combined, decayedTrails + newGhost * 0.6, 0.35);
+  if (u_mode < 0.5) {
+    // -------------------------------------------------------------
+    // MOTION TRAILS MODE:
+    // Store ONLY the moving pixels. Static areas receive ZERO energy.
+    // -------------------------------------------------------------
+    float ghostEnergy = motionMask * u_trailBrightness * (1.0 + u_intensity * 0.6);
+    vec3 newGhost = trailHue * ghostEnergy;
 
-  gl_FragColor = vec4(combined, max(prevFeedback.a * decayFactor, motionGate));
+    // Blend: retain the trailing silhouette while fading
+    combined = max(decayedTrails, newGhost);
+    combined = mix(combined, decayedTrails + newGhost * 0.5, 0.3);
+    outAlpha = max(prevFeedback.a * decayFactor, motionMask);
+  } else {
+    // -------------------------------------------------------------
+    // OVERLAY MODE (Full-frame glitch overlay)
+    // -------------------------------------------------------------
+    float motionGate = smoothstep(0.04, 0.28, motion) * person;
+    float ghostEnergy = motionGate * (u_intensity * 1.5 + 0.2);
+    vec3 newGhost = trailHue * ghostEnergy;
+
+    combined = max(decayedTrails, newGhost);
+    combined = mix(combined, decayedTrails + newGhost * 0.6, 0.35);
+    outAlpha = max(prevFeedback.a * decayFactor, motionGate);
+  }
+
+  gl_FragColor = vec4(combined, outAlpha);
 }
 `;

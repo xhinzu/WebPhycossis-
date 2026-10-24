@@ -8,10 +8,12 @@ export interface HudStats {
   isRecording: boolean;
   recordingTime: string;
   hasSegmentation: boolean;
+  mode?: string;
 }
 
 export class HudManager {
   private container: HTMLElement;
+  private modeTag: HTMLElement | null = null;
   private levelFill: HTMLElement | null = null;
   private levelPct: HTMLElement | null = null;
   private statusText: HTMLElement | null = null;
@@ -96,6 +98,7 @@ export class HudManager {
       </div>
     `;
 
+    this.modeTag = this.container.querySelector('#hud-mode-tag');
     this.levelFill = this.container.querySelector('#hud-level-fill');
     this.levelPct = this.container.querySelector('#hud-level-pct');
     this.statusText = this.container.querySelector('#hud-status-text');
@@ -109,6 +112,10 @@ export class HudManager {
 
   public update(stats: HudStats): void {
     if (!this.isVisible) return;
+
+    if (this.modeTag && stats.mode) {
+      this.modeTag.textContent = stats.mode;
+    }
 
     // 1. Intensity / Cyberpsychosis Level
     const pct = Math.round(stats.intensity * 100);

@@ -1,6 +1,10 @@
 export type QualityLevel = 'auto' | 'high' | 'med' | 'low';
+export type EffectMode = 'motion_trails' | 'overlay';
 
 export interface EffectSettings {
+  // Mode: 'motion_trails' (clean video + ghost trails on motion) | 'overlay' (full-frame glitch)
+  effectMode: EffectMode;
+
   // Master
   masterIntensity: number; // 0.0 to 1.0
 
@@ -8,6 +12,9 @@ export interface EffectSettings {
   trailPersistence: number; // 0.70 to 0.98
   trailDecay: number; // 0.01 to 0.30
   trailLag: number; // 0.0 to 1.0
+  trailSpread: number; // 0.0 to 1.0 (spacing of discrete echoes)
+  trailCount: number; // 1 to 6 (number of discrete echoes)
+  trailBrightness: number; // 0.5 to 2.5
   trailColor: [number, number, number]; // [r, g, b] 0-1
 
   // Glitch layers

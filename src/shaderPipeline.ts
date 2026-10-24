@@ -142,6 +142,9 @@ export class ShaderPipeline {
         'u_resolution',
         'u_mirror',
         'u_flipY',
+        'u_mode',
+        'u_trailBrightness',
+        'u_motionSensitivity',
       ];
       for (const name of uList) {
         this.feedbackUniforms[name] = gl.getUniformLocation(this.feedbackProgram, name);
@@ -171,6 +174,10 @@ export class ShaderPipeline {
         'u_resolution',
         'u_mirror',
         'u_flipY',
+        'u_mode',
+        'u_trailCount',
+        'u_trailSpread',
+        'u_trailBrightness',
       ];
       for (const name of uList) {
         this.compositeUniforms[name] = gl.getUniformLocation(this.compositeProgram, name);
@@ -483,6 +490,8 @@ export class ShaderPipeline {
     gl.uniform1i(this.feedbackUniforms['u_mask'], 3);
 
     // Pass Feedback Uniforms
+    const modeVal = settings.effectMode === 'overlay' ? 1.0 : 0.0;
+
     gl.uniform1f(this.feedbackUniforms['u_useMask'], settings.useSegmentation ? 1.0 : 0.0);
     gl.uniform1f(this.feedbackUniforms['u_persistence'], settings.trailPersistence);
     gl.uniform1f(this.feedbackUniforms['u_decay'], settings.trailDecay);
@@ -498,6 +507,9 @@ export class ShaderPipeline {
     gl.uniform2f(this.feedbackUniforms['u_resolution'], this.renderWidth, this.renderHeight);
     gl.uniform1f(this.feedbackUniforms['u_mirror'], settings.mirror ? 1.0 : 0.0);
     gl.uniform1f(this.feedbackUniforms['u_flipY'], settings.flipY !== false ? 1.0 : 0.0);
+    gl.uniform1f(this.feedbackUniforms['u_mode'], modeVal);
+    gl.uniform1f(this.feedbackUniforms['u_trailBrightness'], settings.trailBrightness ?? 1.5);
+    gl.uniform1f(this.feedbackUniforms['u_motionSensitivity'], settings.motionSensitivity ?? 0.65);
 
     gl.drawArrays(gl.TRIANGLES, 0, 6);
 
@@ -532,6 +544,10 @@ export class ShaderPipeline {
     gl.bindTexture(gl.TEXTURE_2D, this.watermarkTexture);
     gl.uniform1i(this.compositeUniforms['u_watermarkTex'], 3);
 
+    // Scale trail spread and brightness with master intensity in Motion Trails mode
+    const dynamicSpread = (settings.trailSpread ?? 0.65) * (0.6 + effectiveIntensity * 0.6);
+    const dynamicBrightness = (settings.trailBrightness ?? 1.5) * (0.65 + effectiveIntensity * 0.55);
+
     // Uniforms
     gl.uniform1f(this.compositeUniforms['u_useMask'], settings.useSegmentation ? 1.0 : 0.0);
     gl.uniform1f(this.compositeUniforms['u_watermark'], settings.watermark ? 1.0 : 0.0);
@@ -554,6 +570,10 @@ export class ShaderPipeline {
     gl.uniform2f(this.compositeUniforms['u_resolution'], this.renderWidth, this.renderHeight);
     gl.uniform1f(this.compositeUniforms['u_mirror'], settings.mirror ? 1.0 : 0.0);
     gl.uniform1f(this.compositeUniforms['u_flipY'], settings.flipY !== false ? 1.0 : 0.0);
+    gl.uniform1f(this.compositeUniforms['u_mode'], modeVal);
+    gl.uniform1f(this.compositeUniforms['u_trailCount'], settings.trailCount ?? 4.0);
+    gl.uniform1f(this.compositeUniforms['u_trailSpread'], dynamicSpread);
+    gl.uniform1f(this.compositeUniforms['u_trailBrightness'], dynamicBrightness);
 
     gl.drawArrays(gl.TRIANGLES, 0, 6);
 

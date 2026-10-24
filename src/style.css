@@ -438,6 +438,57 @@ html, body {
   border-top: 1px solid rgba(0, 255, 102, 0.15);
 }
 
+/* Mode Switcher Bar */
+.mode-switcher-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 2px;
+}
+
+.mode-pill {
+  background: rgba(14, 18, 28, 0.9);
+  border: 1px solid rgba(0, 255, 102, 0.3);
+  color: #c0dec8;
+  padding: 6px 16px;
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+  clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%);
+}
+
+.mode-pill:hover {
+  border-color: var(--neon-green);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.mode-pill.active {
+  background: rgba(0, 255, 102, 0.22);
+  border-color: var(--neon-green);
+  color: #fff;
+  box-shadow: 0 0 15px rgba(0, 255, 102, 0.4);
+}
+
+.mode-badge {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  background: var(--neon-green);
+  color: #06080c;
+  padding: 1px 5px;
+  border-radius: 2px;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+}
+
 /* Presets Strip */
 .presets-strip {
   display: flex;

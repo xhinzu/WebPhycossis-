@@ -171,6 +171,7 @@ class WebPhycossisApp {
       isRecording: this.recorder.state.isRecording,
       recordingTime: `${Math.floor(this.recorder.state.durationMs / 1000)}s`,
       hasSegmentation: this.settings.useSegmentation && this.segmentation.isAvailable(),
+      mode: this.settings.effectMode === 'motion_trails' ? 'MODE: MOTION TRAILS' : 'MODE: OVERLAY',
     });
 
     requestAnimationFrame((t) => this.renderLoop(t));
