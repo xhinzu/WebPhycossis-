@@ -50,6 +50,11 @@ void main() {
   if (u_useMask > 0.5) {
     person = texture2D(u_mask, videoUv).r;
     motionMask *= smoothstep(0.2, 0.6, person);
+  } else if (u_mode < 0.5) {
+    // Fallback if segmentation is unavailable: restrict trails strictly outside central face area
+    vec2 faceDist = (uv - vec2(0.5, 0.68)) / vec2(0.20, 0.26);
+    float outsideFace = smoothstep(0.70, 1.0, length(faceDist));
+    motionMask *= outsideFace;
   }
 
   // Sample previous feedback trails with slight lag drift

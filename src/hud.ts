@@ -55,6 +55,9 @@ export class HudManager {
           <div id="hud-flatline-banner" class="hud-flatline-banner hidden">
             ⚠️ FLATLINE IMMINENT // PURGE CYBERWARE NOW ⚠️
           </div>
+          <div id="hud-seg-banner" class="hud-seg-fallback-notice hidden" style="font-family: var(--font-mono); font-size: 11px; color: #ffbe00; background: rgba(20, 15, 0, 0.85); border: 1px solid rgba(255, 190, 0, 0.6); padding: 3px 10px; border-radius: 4px; letter-spacing: 0.8px; text-shadow: 0 0 8px rgba(255, 190, 0, 0.5);">
+            ⚡ SEGMENTATION OFFLINE // FACE SAFEGUARD ACTIVE
+          </div>
         </div>
 
         <div class="hud-section right-stats">
@@ -108,13 +111,26 @@ export class HudManager {
     this.recBadge = this.container.querySelector('#hud-rec-badge');
     this.audioBar = this.container.querySelector('#hud-audio-bar');
     this.flatlineBanner = this.container.querySelector('#hud-flatline-banner');
+    this.segBanner = this.container.querySelector('#hud-seg-banner');
   }
+
+  private segBanner: HTMLElement | null = null;
 
   public update(stats: HudStats): void {
     if (!this.isVisible) return;
 
     if (this.modeTag && stats.mode) {
       this.modeTag.textContent = stats.mode;
+    }
+
+    // Segmentation fallback notice (if in MOTION TRAILS mode and segmentation is off/unavailable)
+    if (this.segBanner) {
+      const isMotionTrails = !stats.mode || stats.mode.includes('MOTION TRAILS');
+      if (isMotionTrails && !stats.hasSegmentation) {
+        this.segBanner.classList.remove('hidden');
+      } else {
+        this.segBanner.classList.add('hidden');
+      }
     }
 
     // 1. Intensity / Cyberpsychosis Level

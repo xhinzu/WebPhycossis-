@@ -64,6 +64,18 @@ export class SegmentationManager {
     return this.isReady;
   }
 
+  public setQuality(quality: 'auto' | 'high' | 'med' | 'low'): void {
+    if (quality === 'high') {
+      this.frameIntervalMs = 40; // ~25 fps
+    } else if (quality === 'med') {
+      this.frameIntervalMs = 70; // ~14 fps (every 2nd frame)
+    } else if (quality === 'low') {
+      this.frameIntervalMs = 120; // ~8 fps (every 3rd-4th frame, reusing previous mask)
+    } else {
+      this.frameIntervalMs = 50; // auto ~20 fps
+    }
+  }
+
   public processVideoFrame(video: HTMLVideoElement, timestamp: number): void {
     if (!this.isReady || !this.segmenter || this.isProcessing) return;
     if (timestamp - this.lastProcessTime < this.frameIntervalMs) return;

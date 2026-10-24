@@ -261,6 +261,7 @@ class WebPhycossisApp {
   private handleQualityChange(q: QualityLevel): void {
     this.settings.quality = q;
     this.pipeline.setQuality(q);
+    this.segmentation.setQuality(q);
     this.ui.showToast(`QUALITY: ${q.toUpperCase()}`);
   }
 }

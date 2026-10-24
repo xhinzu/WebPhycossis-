@@ -28,6 +28,10 @@ uniform float u_mode; // 0.0 = MOTION TRAILS, 1.0 = OVERLAY
 uniform float u_trailCount; // 1.0 to 6.0
 uniform float u_trailSpread; // 0.0 to 1.0
 uniform float u_trailBrightness; // 0.5 to 2.5
+uniform float u_bgDarken; // 0.0 to 0.6 (default 0.25)
+uniform float u_edgeFeather; // 0.01 to 0.20 (default 0.06)
+uniform float u_trailOpacity; // 0.2 to 2.0 (default 1.2)
+uniform float u_faceProtection; // 1.0 = on, 0.0 = off
 
 float hash(float n) {
   return fract(sin(n) * 43758.5453123);
@@ -66,21 +70,53 @@ void main() {
   if (u_mode < 0.5) {
     // =========================================================================
     // MODE 1: MOTION TRAILS (DEFAULT)
-    // Clean normal camera video + discrete neon-green Sandevistan afterimages.
-    // Static areas and still subjects remain 100% CLEAN.
+    // 3-LAYER SANDWICH COMPOSITING:
+    // Layer 1 (Bottom): Background live frame (darkened/desaturated via slider)
+    // Layer 2 (Middle): Glowing neon ghost trails (BEHIND and AROUND subject)
+    // Layer 3 (Top):    100% UNTOUCHED, CRYSTAL-CLEAR live person & face
     // =========================================================================
-    vec3 cleanVideo = texture2D(u_video, videoUv).rgb;
+    vec3 liveFrame = texture2D(u_video, videoUv).rgb;
 
-    // Optional background desaturation with segmentation
-    if (u_useMask > 0.5 && u_desatBg > 0.01) {
-      float mask = texture2D(u_mask, videoUv).r;
-      float isPerson = smoothstep(0.25, 0.65, mask);
-      float luma = dot(cleanVideo, vec3(0.299, 0.587, 0.114));
-      vec3 cyberBg = mix(cleanVideo, vec3(luma * 0.35, luma * 0.45, luma * 0.55), u_desatBg * 0.85);
-      cleanVideo = mix(cyberBg, cleanVideo, isPerson);
+    // 1. Calculate feathered subject mask & face protection safeguard
+    float subjectMask = 0.0;
+    float rawMask = 0.0;
+    vec2 pxStep = vec2(2.5 / u_resolution.x, 2.5 / u_resolution.y);
+
+    if (u_useMask > 0.5) {
+      float m0 = texture2D(u_mask, videoUv).r;
+      float m1 = texture2D(u_mask, videoUv + vec2(pxStep.x, 0.0)).r;
+      float m2 = texture2D(u_mask, videoUv - vec2(pxStep.x, 0.0)).r;
+      float m3 = texture2D(u_mask, videoUv + vec2(0.0, pxStep.y)).r;
+      float m4 = texture2D(u_mask, videoUv - vec2(0.0, pxStep.y)).r;
+      rawMask = m0;
+      // Multi-tap minimum erosion (2-4px) completely eliminates green halo/fringe on subject edges
+      float erodedMask = min(m0, min(min(m1, m2), min(m3, m4)));
+      float feather = clamp(u_edgeFeather, 0.01, 0.20);
+      subjectMask = smoothstep(0.48 - feather, 0.52 + feather, erodedMask);
     }
 
-    // Discrete Sandevistan afterimage echoes (multi-tap)
+    // Face Protection Safeguard:
+    // Screen-space head & face safety zone ensures the face is ALWAYS pure, pristine live frame
+    if (u_faceProtection > 0.5) {
+      vec2 faceCenter = vec2(0.5, 0.68);
+      vec2 faceDist = (uv - faceCenter) / vec2(0.20, 0.26);
+      float faceEllipse = 1.0 - smoothstep(0.70, 1.0, length(faceDist));
+      if (u_useMask > 0.5) {
+        // Enforce face region unconditionally even if segmentation drops confidence on edge
+        subjectMask = max(subjectMask, faceEllipse * smoothstep(0.10, 0.30, rawMask));
+      } else {
+        // Fallback: segmentation unavailable, force central face region 100% clean
+        subjectMask = max(subjectMask, faceEllipse);
+      }
+    }
+
+    // 2. LAYER 1: Background Layer (Live camera frame with darkening/desaturation)
+    float bgDarken = clamp(u_bgDarken, 0.0, 0.60);
+    vec3 bgLayer = liveFrame * (1.0 - bgDarken);
+    float bgLuma = dot(bgLayer, vec3(0.299, 0.587, 0.114));
+    bgLayer = mix(bgLayer, vec3(bgLuma * 0.9, bgLuma * 0.95, bgLuma * 1.0), bgDarken * 0.5);
+
+    // 3. LAYER 2: Trail Layer (Multi-tap discrete Sandevistan afterimages)
     vec3 ghostEchoes = vec3(0.0);
     float totalWeight = 0.0;
 
@@ -88,7 +124,6 @@ void main() {
       if (float(i) >= u_trailCount) break;
       float fi = float(i);
 
-      // Staggered spatial lag offset for discrete afterimage echoes
       vec2 echoOffset = vec2(
         sin(u_time * 2.0 + fi * 1.4) * 0.002,
         -0.004 * (fi + 1.0)
@@ -97,7 +132,7 @@ void main() {
       vec2 sampleUv = rawUv + echoOffset;
       vec3 tap = texture2D(u_feedback, sampleUv).rgb;
 
-      // Chromatic separation on deeper echo layers
+      // Chromatic separation on deeper echo layers (confined inside trail layer)
       if (fi > 0.5 && u_rgbSplit > 0.005) {
         float splitShift = u_rgbSplit * 0.015 * fi;
         float r = texture2D(u_feedback, sampleUv + vec2(splitShift, 0.0)).r;
@@ -111,15 +146,25 @@ void main() {
     }
 
     if (totalWeight > 0.0) {
-      ghostEchoes = (ghostEchoes / totalWeight) * (u_trailBrightness * (1.1 + u_intensity * 0.7));
+      ghostEchoes = (ghostEchoes / totalWeight) * (u_trailBrightness * (1.1 + u_intensity * 0.7)) * u_trailOpacity;
     }
 
-    // Screen blend: Clean Camera Image + Glowing Neon Ghost Echoes
-    // Clean pixels with zero ghost energy are completely unchanged!
-    col = 1.0 - (1.0 - cleanVideo) * (1.0 - clamp(ghostEchoes, 0.0, 1.0));
+    // Mask trails OUT from current subject position so trails only emerge BEHIND and AROUND
+    // Dilated cutout boundary ensures zero green trails or glow bleed into the subject edge
+    float trailCutout = subjectMask;
+    if (u_useMask > 0.5) {
+      trailCutout = max(trailCutout, smoothstep(0.32, 0.52, rawMask));
+    }
+    ghostEchoes *= (1.0 - trailCutout);
 
-    // Shockwave flash ring highlight
-    col += vec3(0.15, 1.0, 0.55) * wave * 0.85;
+    // Composite trails onto background (screen blend)
+    vec3 bgWithTrails = 1.0 - (1.0 - bgLayer) * (1.0 - clamp(ghostEchoes, 0.0, 1.0));
+
+    // Shockwave flash ring (confined to background/trails, never on face or body)
+    bgWithTrails += vec3(0.15, 1.0, 0.55) * wave * 0.85 * (1.0 - subjectMask);
+
+    // 4. LAYER 3: Subject Layer (Always on top, 100% clean live camera frame, no tint, no glitch)
+    col = mix(bgWithTrails, liveFrame, subjectMask);
 
   } else {
     // =========================================================================

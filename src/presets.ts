@@ -18,7 +18,11 @@ export const DEFAULT_SETTINGS: EffectSettings = {
   contrast: 1.35,
   greenGrade: 0.8,
   desatBg: 0.75,
-  useSegmentation: false,
+  bgDarken: 0.25, // 25% background darkening by default for Motion Trails
+  edgeFeather: 0.06, // Clean feathered subject edge
+  trailOpacity: 1.2,
+  faceProtection: true, // Always protect face region
+  useSegmentation: true, // ON by default for Motion Trails mode
   autoTrigger: true,
   motionSensitivity: 0.65,
   audioSensitivity: 0.75,

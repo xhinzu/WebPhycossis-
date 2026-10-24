@@ -29,6 +29,12 @@ export interface EffectSettings {
   greenGrade: number; // 0.0 to 1.0
   desatBg: number; // 0.0 to 1.0 (when segmentation active)
 
+  // Motion Trails 3-Layer Compositing & Face Protection
+  bgDarken: number; // 0.0 to 0.6 (default 0.25)
+  edgeFeather: number; // 0.01 to 0.20 (default 0.06)
+  trailOpacity: number; // 0.2 to 2.0 (default 1.2)
+  faceProtection: boolean; // Protect face from trails
+
   // Features
   useSegmentation: boolean;
   autoTrigger: boolean;

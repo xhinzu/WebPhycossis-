@@ -199,6 +199,14 @@ export class UiManager {
 
             <div class="control-row">
               <div class="control-header">
+                <span>Trail Opacity</span>
+                <span id="val-trail-opacity" class="control-val">120%</span>
+              </div>
+              <input type="range" id="slider-trail-opacity" class="cyber-slider" min="20" max="200" value="120" />
+            </div>
+
+            <div class="control-row">
+              <div class="control-header">
                 <span>Trail Glow Brightness</span>
                 <span id="val-trail-brightness" class="control-val">1.50</span>
               </div>
@@ -279,9 +287,19 @@ export class UiManager {
             <div class="cyber-switch-row">
               <div class="switch-label-wrap">
                 <span style="font-weight:600;">Person Segmentation (MediaPipe)</span>
-                <span class="switch-subtext">Isolates trails to subject body & desaturates background</span>
+                <span class="switch-subtext">Isolates trails to subject body & separates subject from background</span>
               </div>
-              <div id="switch-segmentation" class="cyber-switch">
+              <div id="switch-segmentation" class="cyber-switch checked">
+                <div class="switch-handle"></div>
+              </div>
+            </div>
+
+            <div class="cyber-switch-row">
+              <div class="switch-label-wrap">
+                <span style="font-weight:600;">Face Protection Safeguard</span>
+                <span class="switch-subtext">Always forces face & head region to stay 100% clean live camera</span>
+              </div>
+              <div id="switch-face-protection" class="cyber-switch checked">
                 <div class="switch-handle"></div>
               </div>
             </div>
@@ -294,6 +312,22 @@ export class UiManager {
               <div id="switch-flip-y" class="cyber-switch checked">
                 <div class="switch-handle"></div>
               </div>
+            </div>
+
+            <div class="control-row" style="margin-top:12px;">
+              <div class="control-header">
+                <span>Background Darkening</span>
+                <span id="val-bg-darken" class="control-val">25%</span>
+              </div>
+              <input type="range" id="slider-bg-darken" class="cyber-slider" min="0" max="60" value="25" />
+            </div>
+
+            <div class="control-row">
+              <div class="control-header">
+                <span>Subject Edge Feather (Anti-Halo)</span>
+                <span id="val-edge-feather" class="control-val">0.06</span>
+              </div>
+              <input type="range" id="slider-edge-feather" class="cyber-slider" min="1" max="20" value="6" />
             </div>
 
             <div class="control-row" style="margin-top:12px;">
@@ -642,6 +676,15 @@ export class UiManager {
     this.bindRangeSlider('slider-sfx-vol', 'val-sfx-vol', 100, (v) => {
       this.settings.sfxVolume = v;
     });
+    this.bindRangeSlider('slider-trail-opacity', 'val-trail-opacity', 100, (v) => {
+      this.settings.trailOpacity = v;
+    }, (v) => `${Math.round(v * 100)}%`);
+    this.bindRangeSlider('slider-bg-darken', 'val-bg-darken', 100, (v) => {
+      this.settings.bgDarken = v;
+    }, (v) => `${Math.round(v * 100)}%`);
+    this.bindRangeSlider('slider-edge-feather', 'val-edge-feather', 100, (v) => {
+      this.settings.edgeFeather = v;
+    }, (v) => v.toFixed(2));
 
     // Color buttons
     const colorBtns = this.appRoot.querySelectorAll('button[data-color]');
@@ -662,6 +705,13 @@ export class UiManager {
       this.settings.useSegmentation = checked;
       this.callbacks.onSettingsChange(this.settings);
       saveCustomSettings(this.settings);
+    });
+
+    this.bindSwitch('switch-face-protection', (checked) => {
+      this.settings.faceProtection = checked;
+      this.callbacks.onSettingsChange(this.settings);
+      saveCustomSettings(this.settings);
+      this.showToast(checked ? 'FACE SAFEGUARD: ON (Pristine Face Lock)' : 'FACE SAFEGUARD: OFF');
     });
 
     this.bindSwitch('switch-flip-y', (checked) => {
@@ -778,7 +828,8 @@ export class UiManager {
     sliderId: string,
     valBadgeId: string,
     divisor: number,
-    setter: (val: number) => void
+    setter: (val: number) => void,
+    formatter?: (val: number) => string
   ): void {
     const slider = this.appRoot.querySelector(`#${sliderId}`) as HTMLInputElement | null;
     const badge = this.appRoot.querySelector(`#${valBadgeId}`) as HTMLElement | null;
@@ -787,7 +838,7 @@ export class UiManager {
     slider.addEventListener('input', () => {
       const v = parseFloat(slider.value) / divisor;
       setter(v);
-      badge.textContent = v.toFixed(divisor >= 1000 ? 3 : 2);
+      badge.textContent = formatter ? formatter(v) : v.toFixed(divisor >= 1000 ? 3 : 2);
       this.callbacks.onSettingsChange(this.settings);
       saveCustomSettings(this.settings);
     });
@@ -814,11 +865,11 @@ export class UiManager {
     this.masterSlider.value = String(Math.round(this.settings.masterIntensity * 100));
     this.masterValBadge.textContent = `${this.masterSlider.value}%`;
 
-    const setSlider = (id: string, badgeId: string, val: number, divisor: number) => {
+    const setSlider = (id: string, badgeId: string, val: number, divisor: number, formatter?: (val: number) => string) => {
       const s = this.appRoot.querySelector(`#${id}`) as HTMLInputElement | null;
       const b = this.appRoot.querySelector(`#${badgeId}`) as HTMLElement | null;
       if (s) s.value = String(Math.round(val * divisor));
-      if (b) b.textContent = val.toFixed(divisor >= 1000 ? 3 : 2);
+      if (b) b.textContent = formatter ? formatter(val) : val.toFixed(divisor >= 1000 ? 3 : 2);
     };
 
     // Mode pills active state
@@ -834,6 +885,7 @@ export class UiManager {
     setSlider('slider-trail-count', 'val-trail-count', this.settings.trailCount ?? 4, 1);
     setSlider('slider-trail-spread', 'val-trail-spread', this.settings.trailSpread ?? 0.65, 100);
     setSlider('slider-trail-brightness', 'val-trail-brightness', this.settings.trailBrightness ?? 1.5, 100);
+    setSlider('slider-trail-opacity', 'val-trail-opacity', this.settings.trailOpacity ?? 1.2, 100, (v) => `${Math.round(v * 100)}%`);
     setSlider('slider-trail-persist', 'val-trail-persist', this.settings.trailPersistence, 100);
     setSlider('slider-trail-lag', 'val-trail-lag', this.settings.trailLag, 100);
     setSlider('slider-rgb-split', 'val-rgb-split', this.settings.rgbSplit, 1000);
@@ -844,6 +896,8 @@ export class UiManager {
     setSlider('slider-contrast', 'val-contrast', this.settings.contrast, 100);
     setSlider('slider-green-grade', 'val-green-grade', this.settings.greenGrade, 100);
     setSlider('slider-desat-bg', 'val-desat-bg', this.settings.desatBg, 100);
+    setSlider('slider-bg-darken', 'val-bg-darken', this.settings.bgDarken ?? 0.25, 100, (v) => `${Math.round(v * 100)}%`);
+    setSlider('slider-edge-feather', 'val-edge-feather', this.settings.edgeFeather ?? 0.06, 100, (v) => v.toFixed(2));
     setSlider('slider-motion-sens', 'val-motion-sens', this.settings.motionSensitivity, 100);
     setSlider('slider-audio-sens', 'val-audio-sens', this.settings.audioSensitivity, 100);
     setSlider('slider-scream-thresh', 'val-scream-thresh', this.settings.screamThreshold, 100);
@@ -858,6 +912,7 @@ export class UiManager {
     };
 
     setSw('switch-segmentation', this.settings.useSegmentation);
+    setSw('switch-face-protection', this.settings.faceProtection !== false);
     setSw('switch-flip-y', this.settings.flipY !== false);
     setSw('switch-auto-trigger', this.settings.autoTrigger);
     setSw('switch-watermark', this.settings.watermark);

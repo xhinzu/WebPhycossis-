@@ -178,6 +178,10 @@ export class ShaderPipeline {
         'u_trailCount',
         'u_trailSpread',
         'u_trailBrightness',
+        'u_bgDarken',
+        'u_edgeFeather',
+        'u_trailOpacity',
+        'u_faceProtection',
       ];
       for (const name of uList) {
         this.compositeUniforms[name] = gl.getUniformLocation(this.compositeProgram, name);
@@ -347,14 +351,29 @@ export class ShaderPipeline {
     }
   }
 
+  private prevMaskBuffer: Float32Array | null = null;
+
   public updateMask(floatData: Float32Array, width: number, height: number): void {
     const gl = this.gl;
     if (!this.maskTexture) return;
 
+    const len = width * height;
+    if (!this.prevMaskBuffer || this.prevMaskBuffer.length !== len) {
+      this.prevMaskBuffer = new Float32Array(len);
+      this.prevMaskBuffer.set(floatData);
+    } else {
+      // Temporal smoothing (65% previous, 35% current) to prevent high-frequency edge flicker
+      const alpha = 0.35;
+      for (let i = 0; i < len; i++) {
+        this.prevMaskBuffer[i] = this.prevMaskBuffer[i] * (1.0 - alpha) + floatData[i] * alpha;
+      }
+    }
+
     // Convert Float32 confidence mask [0..1] to Uint8Array [0..255]
-    const uint8 = new Uint8Array(width * height);
-    for (let i = 0; i < floatData.length; i++) {
-      uint8[i] = Math.min(255, Math.max(0, Math.round(floatData[i] * 255)));
+    const uint8 = new Uint8Array(len);
+    const src = this.prevMaskBuffer;
+    for (let i = 0; i < len; i++) {
+      uint8[i] = Math.min(255, Math.max(0, Math.round(src[i] * 255)));
     }
 
     gl.bindTexture(gl.TEXTURE_2D, this.maskTexture);
@@ -574,6 +593,10 @@ export class ShaderPipeline {
     gl.uniform1f(this.compositeUniforms['u_trailCount'], settings.trailCount ?? 4.0);
     gl.uniform1f(this.compositeUniforms['u_trailSpread'], dynamicSpread);
     gl.uniform1f(this.compositeUniforms['u_trailBrightness'], dynamicBrightness);
+    gl.uniform1f(this.compositeUniforms['u_bgDarken'], settings.bgDarken ?? 0.25);
+    gl.uniform1f(this.compositeUniforms['u_edgeFeather'], settings.edgeFeather ?? 0.06);
+    gl.uniform1f(this.compositeUniforms['u_trailOpacity'], settings.trailOpacity ?? 1.2);
+    gl.uniform1f(this.compositeUniforms['u_faceProtection'], settings.faceProtection !== false ? 1.0 : 0.0);
 
     gl.drawArrays(gl.TRIANGLES, 0, 6);
 
