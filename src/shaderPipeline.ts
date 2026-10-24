@@ -141,6 +141,7 @@ export class ShaderPipeline {
         'u_trailLag',
         'u_resolution',
         'u_mirror',
+        'u_flipY',
       ];
       for (const name of uList) {
         this.feedbackUniforms[name] = gl.getUniformLocation(this.feedbackProgram, name);
@@ -169,6 +170,7 @@ export class ShaderPipeline {
         'u_shockwavePos',
         'u_resolution',
         'u_mirror',
+        'u_flipY',
       ];
       for (const name of uList) {
         this.compositeUniforms[name] = gl.getUniformLocation(this.compositeProgram, name);
@@ -495,6 +497,7 @@ export class ShaderPipeline {
     gl.uniform1f(this.feedbackUniforms['u_trailLag'], settings.trailLag);
     gl.uniform2f(this.feedbackUniforms['u_resolution'], this.renderWidth, this.renderHeight);
     gl.uniform1f(this.feedbackUniforms['u_mirror'], settings.mirror ? 1.0 : 0.0);
+    gl.uniform1f(this.feedbackUniforms['u_flipY'], settings.flipY !== false ? 1.0 : 0.0);
 
     gl.drawArrays(gl.TRIANGLES, 0, 6);
 
@@ -550,6 +553,7 @@ export class ShaderPipeline {
     );
     gl.uniform2f(this.compositeUniforms['u_resolution'], this.renderWidth, this.renderHeight);
     gl.uniform1f(this.compositeUniforms['u_mirror'], settings.mirror ? 1.0 : 0.0);
+    gl.uniform1f(this.compositeUniforms['u_flipY'], settings.flipY !== false ? 1.0 : 0.0);
 
     gl.drawArrays(gl.TRIANGLES, 0, 6);
 

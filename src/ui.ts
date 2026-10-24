@@ -251,6 +251,16 @@ export class UiManager {
               </div>
             </div>
 
+            <div class="cyber-switch-row">
+              <div class="switch-label-wrap">
+                <span style="font-weight:600;">Vertical Invert (Upright Camera)</span>
+                <span class="switch-subtext">Compensates camera sensor orientation (on by default)</span>
+              </div>
+              <div id="switch-flip-y" class="cyber-switch checked">
+                <div class="switch-handle"></div>
+              </div>
+            </div>
+
             <div class="control-row" style="margin-top:12px;">
               <div class="control-header">
                 <span>Background Desaturation</span>
@@ -590,6 +600,12 @@ export class UiManager {
       saveCustomSettings(this.settings);
     });
 
+    this.bindSwitch('switch-flip-y', (checked) => {
+      this.settings.flipY = checked;
+      this.callbacks.onSettingsChange(this.settings);
+      saveCustomSettings(this.settings);
+    });
+
     this.bindSwitch('switch-auto-trigger', (checked) => {
       this.settings.autoTrigger = checked;
       this.callbacks.onSettingsChange(this.settings);
@@ -765,6 +781,7 @@ export class UiManager {
     };
 
     setSw('switch-segmentation', this.settings.useSegmentation);
+    setSw('switch-flip-y', this.settings.flipY !== false);
     setSw('switch-auto-trigger', this.settings.autoTrigger);
     setSw('switch-watermark', this.settings.watermark);
 

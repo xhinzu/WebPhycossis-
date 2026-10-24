@@ -25,6 +25,7 @@ export const DEFAULT_SETTINGS: EffectSettings = {
   watermark: true,
   quality: 'auto',
   mirror: true,
+  flipY: true,
   facingMode: 'user',
   hudVisible: true,
 };

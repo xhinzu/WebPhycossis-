@@ -16,6 +16,7 @@ uniform vec3 u_trailColor;
 uniform float u_trailLag;
 uniform vec2 u_resolution;
 uniform float u_mirror;
+uniform float u_flipY;
 
 void main() {
   vec2 uv = v_uv;
@@ -23,9 +24,15 @@ void main() {
     uv.x = 1.0 - uv.x;
   }
 
+  // Handle WebGL vertical texture flip (camera video and mask)
+  vec2 videoUv = uv;
+  if (u_flipY > 0.5) {
+    videoUv.y = 1.0 - videoUv.y;
+  }
+
   // Sample current and previous video frames
-  vec3 currCol = texture2D(u_currentFrame, uv).rgb;
-  vec3 prevCol = texture2D(u_prevFrame, uv).rgb;
+  vec3 currCol = texture2D(u_currentFrame, videoUv).rgb;
+  vec3 prevCol = texture2D(u_prevFrame, videoUv).rgb;
 
   // Calculate temporal motion magnitude
   vec3 diff = currCol - prevCol;
@@ -34,7 +41,7 @@ void main() {
   // Person segmentation mask
   float person = 1.0;
   if (u_useMask > 0.5) {
-    person = texture2D(u_mask, uv).r;
+    person = texture2D(u_mask, videoUv).r;
   }
 
   // Sample previous feedback trails with slight lag offset

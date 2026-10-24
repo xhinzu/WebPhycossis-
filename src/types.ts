@@ -38,6 +38,7 @@ export interface EffectSettings {
   watermark: boolean;
   quality: QualityLevel;
   mirror: boolean;
+  flipY: boolean;
   facingMode: 'user' | 'environment';
   hudVisible: boolean;
 }

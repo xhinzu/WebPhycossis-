@@ -23,6 +23,7 @@ uniform float u_shockwave;
 uniform vec2 u_shockwavePos;
 uniform vec2 u_resolution;
 uniform float u_mirror;
+uniform float u_flipY;
 
 float hash(float n) {
   return fract(sin(n) * 43758.5453123);
@@ -59,10 +60,13 @@ void main() {
   // Micro scanline jitter
   uv.x += sin(uv.y * 420.0 + u_time * 30.0) * 0.0012 * u_sliceJitter * u_intensity;
 
-  // UV coordinate for camera feed (handling mirror toggle)
+  // UV coordinate for camera feed (handling mirror toggle and vertical flip)
   vec2 videoUv = uv;
   if (u_mirror > 0.5) {
     videoUv.x = 1.0 - videoUv.x;
+  }
+  if (u_flipY > 0.5) {
+    videoUv.y = 1.0 - videoUv.y;
   }
 
   // 3. Chromatic Aberration / RGB Split
@@ -141,7 +145,7 @@ void main() {
         v_uv.y >= wmMarginY && v_uv.y <= (wmMarginY + wmHeight)) {
       vec2 wmUv = vec2(
         (v_uv.x - (1.0 - wmWidth - wmMarginX)) / wmWidth,
-        (v_uv.y - wmMarginY) / wmHeight
+        1.0 - (v_uv.y - wmMarginY) / wmHeight
       );
       vec4 wmCol = texture2D(u_watermarkTex, wmUv);
       col = mix(col, wmCol.rgb, wmCol.a);
